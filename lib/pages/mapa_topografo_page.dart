@@ -1,7 +1,11 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../services/ubicacion_service.dart';
 
 class MapaTopografoPage extends StatefulWidget {
   const MapaTopografoPage({super.key});
@@ -12,6 +16,8 @@ class MapaTopografoPage extends StatefulWidget {
 
 class _MapaTopografoPageState extends State<MapaTopografoPage> {
   Position? _posicionActual;
+  Timer? _timerUbicacion;
+  bool _enviarUbicacion = false; // Estado del switch
 
   @override
   void initState() {
@@ -19,6 +25,7 @@ class _MapaTopografoPageState extends State<MapaTopografoPage> {
     obtenerUbicacion();
   }
 
+  /// Pide permisos y obtiene la posición actual
   Future<void> obtenerUbicacion() async {
     bool servicioHabilitado = await Geolocator.isLocationServiceEnabled();
     if (!servicioHabilitado) {
@@ -38,38 +45,102 @@ class _MapaTopografoPageState extends State<MapaTopografoPage> {
     });
   }
 
+  /// Inicia el timer de envío
+  void iniciarEnvioUbicacion() {
+    _timerUbicacion = Timer.periodic(const Duration(seconds: 10), (timer) async {
+      await UbicacionService.obtenerYGuardar();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Ubicación enviada a Supabase'),
+            duration: Duration(milliseconds: 800),
+          ),
+        );
+      }
+    });
+  }
+
+  /// Detiene el timer
+  void detenerEnvioUbicacion() {
+    _timerUbicacion?.cancel();
+  }
+
+  @override
+  void dispose() {
+    detenerEnvioUbicacion();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Mapa del topógrafo")),
+      appBar: AppBar(
+        title: const Text("Mapa del topógrafo"),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () async {
+              detenerEnvioUbicacion();
+              await Supabase.instance.client.auth.signOut();
+              if (mounted) {
+                Navigator.of(context).pushReplacementNamed('/');
+              }
+            },
+          ),
+        ],
+      ),
       body: _posicionActual == null
           ? const Center(child: CircularProgressIndicator())
-          : FlutterMap(
-              options: MapOptions(
-                initialCenter: LatLng(
-                    _posicionActual!.latitude, _posicionActual!.longitude),
-                initialZoom: 17.0,
-              ),
+          : Column(
               children: [
-                TileLayer(
-                  urlTemplate:
-                      "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-                  userAgentPackageName: 'com.example.mapeo_terreno',
+                SwitchListTile(
+                  title: const Text("Enviar ubicación cada 10 segundos"),
+                  value: _enviarUbicacion,
+                  onChanged: (bool value) {
+                    setState(() {
+                      _enviarUbicacion = value;
+                      if (_enviarUbicacion) {
+                        iniciarEnvioUbicacion();
+                      } else {
+                        detenerEnvioUbicacion();
+                      }
+                    });
+                  },
                 ),
-                MarkerLayer(
-                  markers: [
-                    Marker(
-                      point: LatLng(_posicionActual!.latitude,
-                          _posicionActual!.longitude),
-                      width: 40,
-                      height: 40,
-                      child: const Icon(
-                        Icons.location_pin,
-                        color: Colors.red,
-                        size: 40,
+                Expanded(
+                  child: FlutterMap(
+                    options: MapOptions(
+                      initialCenter: LatLng(
+                        _posicionActual!.latitude,
+                        _posicionActual!.longitude,
                       ),
+                      initialZoom: 17.0,
                     ),
-                  ],
+                    children: [
+                      TileLayer(
+                        urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                        userAgentPackageName: 'com.example.mapeo_terreno',
+                      ),
+                      MarkerLayer(
+                        markers: [
+                          Marker(
+                            point: LatLng(
+                              _posicionActual!.latitude,
+                              _posicionActual!.longitude,
+                            ),
+                            width: 40,
+                            height: 40,
+                            child: const Icon(
+                              Icons.location_pin,
+                              color: Colors.red,
+                              size: 40,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),

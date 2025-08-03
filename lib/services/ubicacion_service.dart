@@ -1,5 +1,6 @@
 import 'package:geolocator/geolocator.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:latlong2/latlong.dart';
 
 class UbicacionService {
   static final supabase = Supabase.instance.client;
@@ -33,4 +34,24 @@ class UbicacionService {
       print('Error al obtener o guardar ubicación: $e');
     }
   }
+
+    /// Consulta todos los puntos del usuario actual
+  static Future<List<LatLng>> obtenerPuntosUsuario() async {
+    final userId = supabase.auth.currentUser?.id;
+    if (userId == null) return [];
+
+    final response = await supabase
+        .from('ubicaciones')
+        .select('latitud, longitud')
+        .eq('user_id', userId)
+        .order('timestamp');
+
+    final datos = response as List;
+    return datos
+        .map((p) => LatLng(p['latitud'] as double, p['longitud'] as double))
+        .toList();
+  }
+
 }
+
+

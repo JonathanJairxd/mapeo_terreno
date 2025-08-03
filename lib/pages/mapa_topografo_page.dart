@@ -6,6 +6,9 @@ import 'package:latlong2/latlong.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../services/ubicacion_service.dart';
+import '../services/terreno_service.dart';
+import '../pages/terreno_detalle_page.dart';
+
 
 class MapaTopografoPage extends StatefulWidget {
   const MapaTopografoPage({super.key});
@@ -18,11 +21,13 @@ class _MapaTopografoPageState extends State<MapaTopografoPage> {
   Position? _posicionActual;
   Timer? _timerUbicacion;
   bool _enviarUbicacion = false; // Estado del switch
+  List<LatLng> _puntos = [];
 
   @override
   void initState() {
     super.initState();
     obtenerUbicacion();
+    obtenerPuntosDesdeSupabase();
   }
 
   /// Pide permisos y obtiene la posición actual
@@ -45,9 +50,18 @@ class _MapaTopografoPageState extends State<MapaTopografoPage> {
     });
   }
 
+  Future<void> obtenerPuntosDesdeSupabase() async {
+    final puntos = await UbicacionService.obtenerPuntosUsuario();
+    setState(() {
+      _puntos = puntos;
+    });
+  }
+
   /// Inicia el timer de envío
   void iniciarEnvioUbicacion() {
-    _timerUbicacion = Timer.periodic(const Duration(seconds: 10), (timer) async {
+    _timerUbicacion = Timer.periodic(const Duration(seconds: 10), (
+      timer,
+    ) async {
       await UbicacionService.obtenerYGuardar();
 
       if (mounted) {
@@ -74,6 +88,27 @@ class _MapaTopografoPageState extends State<MapaTopografoPage> {
 
   @override
   Widget build(BuildContext context) {
+    void finalizarTerreno() async {
+      if (_puntos.length < 3) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Debes tener al menos 3 puntos para guardar el terreno',
+            ),
+          ),
+        );
+        return;
+      }
+
+      await TerrenoService.guardarTerreno(_puntos);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Terreno guardado en Supabase')),
+        );
+      }
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text("Mapa del topógrafo"),
@@ -86,6 +121,14 @@ class _MapaTopografoPageState extends State<MapaTopografoPage> {
               if (mounted) {
                 Navigator.of(context).pushReplacementNamed('/');
               }
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.map),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const TerrenoDetallePage()),
+              );
             },
           ),
         ],
@@ -119,7 +162,8 @@ class _MapaTopografoPageState extends State<MapaTopografoPage> {
                     ),
                     children: [
                       TileLayer(
-                        urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                        urlTemplate:
+                            "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
                         userAgentPackageName: 'com.example.mapeo_terreno',
                       ),
                       MarkerLayer(
@@ -139,7 +183,24 @@ class _MapaTopografoPageState extends State<MapaTopografoPage> {
                           ),
                         ],
                       ),
+                      PolylineLayer(
+                        polylines: [
+                          Polyline(
+                            points: _puntos,
+                            strokeWidth: 4.0,
+                            color: Colors.blueAccent,
+                          ),
+                        ],
+                      ),
                     ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: ElevatedButton.icon(
+                    onPressed: finalizarTerreno,
+                    icon: const Icon(Icons.save),
+                    label: const Text("Finalizar terreno"),
                   ),
                 ),
               ],

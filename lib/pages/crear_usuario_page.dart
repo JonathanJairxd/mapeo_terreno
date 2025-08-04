@@ -78,6 +78,8 @@ class _CrearUsuarioPageState extends State<CrearUsuarioPage> {
         padding: const EdgeInsets.all(20),
         child: ListView(
           children: [
+            const Icon(Icons.person_add, size: 60, color: Colors.blueGrey),
+            const SizedBox(height: 15),
             TextField(
               controller: nombreController,
               decoration: const InputDecoration(labelText: 'Nombre'),
@@ -111,9 +113,10 @@ class _CrearUsuarioPageState extends State<CrearUsuarioPage> {
             const SizedBox(height: 10),
             guardando
                 ? const Center(child: CircularProgressIndicator())
-                : ElevatedButton(
+                : ElevatedButton.icon(
+                    icon: const Icon(Icons.save),
                     onPressed: guardarUsuario,
-                    child: const Text('Crear usuario'),
+                    label: const Text('Crear usuario'),
                   ),
           ],
         ),

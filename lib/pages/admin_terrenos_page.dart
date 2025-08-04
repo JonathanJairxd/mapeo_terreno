@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'ver_terreno_page.dart';
 
@@ -24,9 +25,7 @@ class _AdminTerrenosPageState extends State<AdminTerrenosPage> {
         .from('terrenos')
         .select('id, nombre, area, timestamp, user_id, puntos, descripcion');
 
-    final usuarios = await supabase
-        .from('usuarios')
-        .select('id, nombre');
+    final usuarios = await supabase.from('usuarios').select('id, nombre');
 
     final lista = terrenos.map<Map<String, dynamic>>((t) {
       final user = usuarios.firstWhere(
@@ -54,37 +53,70 @@ class _AdminTerrenosPageState extends State<AdminTerrenosPage> {
     return Scaffold(
       appBar: AppBar(title: const Text('Terrenos Registrados')),
       body: _terrenos.isEmpty
-          ? const Center(child: Text('No hay terrenos guardados'))
+          ? const Center(
+              child: Text(
+                'No hay terrenos guardados',
+                style: TextStyle(fontSize: 16),
+              ),
+            )
           : ListView.builder(
+              padding: const EdgeInsets.all(12),
               itemCount: _terrenos.length,
               itemBuilder: (context, index) {
                 final t = _terrenos[index];
-                return ListTile(
-                  leading: const Icon(Icons.landscape),
-                  title: Text(t['nombre']),
-                  subtitle: Text(
-                    'Área: ${t['area'].toStringAsFixed(2)} m²\n'
-                    'Por: ${t['usuario']}\n'
-                    'Fecha: ${DateTime.parse(t['fecha']).toLocal()}',
+                final fecha = DateTime.parse(t['fecha']).toLocal();
+                final fechaFormateada =
+                    DateFormat('dd/MM/yyyy – hh:mm a').format(fecha);
+                final descripcion = t['descripcion']?.toString().trim();
+                final tieneDescripcion =
+                    descripcion != null && descripcion.isNotEmpty;
+
+                return Card(
+                  elevation: 3,
+                  margin: const EdgeInsets.only(bottom: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  isThreeLine: true,
-                  trailing: const Icon(Icons.arrow_forward_ios),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => VerTerrenoPage(
-                          terreno: {
-                            'nombre': t['nombre'],
-                            'puntos': t['puntos'],
-                            'descripcion': t['descripcion'],
-                            'area': t['area'],
-                            'timestamp': t['fecha'],
-                          },
-                        ),
+                  child: ListTile(
+                    contentPadding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    leading: const Icon(Icons.map, color: Colors.teal),
+                    title: Text(
+                      t['nombre'] ?? 'Sin nombre',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
                       ),
-                    );
-                  },
+                    ),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 4),
+                        Text("Área: ${t['area'].toStringAsFixed(2)} m²"),
+                        Text("Usuario: ${t['usuario']}"),
+                        Text("Fecha: $fechaFormateada"),
+                        if (tieneDescripcion)
+                          Text("Descripción: $descripcion"),
+                      ],
+                    ),
+                    trailing: const Icon(Icons.arrow_forward_ios, size: 18),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => VerTerrenoPage(
+                            terreno: {
+                              'nombre': t['nombre'],
+                              'puntos': t['puntos'],
+                              'descripcion': t['descripcion'],
+                              'area': t['area'],
+                              'timestamp': t['fecha'],
+                            },
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                 );
               },
             ),

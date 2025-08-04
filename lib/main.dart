@@ -21,7 +21,45 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Mapeo de Terreno',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(primarySwatch: Colors.blue),
+      theme: ThemeData(
+  primaryColor: Color(0xFF1B4F72), // Azul marino sobrio
+
+colorScheme: ColorScheme.fromSwatch().copyWith(
+  secondary: Color(0xFF5D6D7E), // Gris azulado elegante
+),
+
+scaffoldBackgroundColor: Color(0xFFF4F6F7), // Gris neutro claro
+
+appBarTheme: AppBarTheme(
+  backgroundColor: Color(0xFF1B4F72),
+  foregroundColor: Colors.white,
+  elevation: 4,
+),
+
+elevatedButtonTheme: ElevatedButtonThemeData(
+  style: ElevatedButton.styleFrom(
+    backgroundColor: Color(0xFF1B4F72),
+    foregroundColor: Colors.white,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+  ),
+),
+
+  inputDecorationTheme: InputDecorationTheme(
+    filled: true,
+    fillColor: Colors.white,
+    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+    focusedBorder: OutlineInputBorder(
+      borderSide: BorderSide(color: Color(0xFF2C3E50)),
+      borderRadius: BorderRadius.circular(10),
+    ),
+  ),
+
+  textTheme: TextTheme(
+    bodyMedium: TextStyle(color: Color(0xFF34495E)),
+    titleLarge: TextStyle(color: Color(0xFF2C3E50), fontWeight: FontWeight.bold),
+  ),
+),
+
       home: const LoginPage(),
     );
   }

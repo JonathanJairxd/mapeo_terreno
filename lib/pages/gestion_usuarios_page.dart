@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
 import 'crear_usuario_page.dart';
 
 class GestionUsuariosPage extends StatefulWidget {
@@ -54,22 +53,25 @@ class _GestionUsuariosPageState extends State<GestionUsuariosPage> {
               itemCount: usuarios.length,
               itemBuilder: (context, index) {
                 final u = usuarios[index];
-                return ListTile(
-                  title: Text(u['nombre']),
-                  subtitle: Text("Rol: ${u['rol']}"),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Switch(
-                        value: u['activo'] ?? false,
-                        onChanged: (val) =>
-                            actualizarEstado(u['id'], val),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () => eliminarUsuario(u['id']),
-                      ),
-                    ],
+                return Card(
+                  margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  child: ListTile(
+                    leading: const Icon(Icons.person),
+                    title: Text(u['nombre']),
+                    subtitle: Text("Rol: ${u['rol']}"),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Switch(
+                          value: u['activo'] ?? false,
+                          onChanged: (val) => actualizarEstado(u['id'], val),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete, color: Colors.red),
+                          onPressed: () => eliminarUsuario(u['id']),
+                        ),
+                      ],
+                    ),
                   ),
                 );
               },
@@ -78,8 +80,7 @@ class _GestionUsuariosPageState extends State<GestionUsuariosPage> {
         onPressed: () {
           Navigator.push(
             context,
-            MaterialPageRoute(
-                builder: (_) => const CrearUsuarioPage()),
+            MaterialPageRoute(builder: (_) => const CrearUsuarioPage()),
           ).then((_) => cargarUsuarios());
         },
         child: const Icon(Icons.person_add),

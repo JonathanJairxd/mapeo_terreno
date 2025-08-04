@@ -17,37 +17,61 @@ class VerTerrenoPage extends StatelessWidget {
       appBar: AppBar(title: Text(terreno['nombre'] ?? 'Terreno')),
       body: puntos.isEmpty
           ? const Center(child: Text('Terreno sin puntos'))
-          : FlutterMap(
-              options: MapOptions(
-                initialCenter: puntos.first,
-                initialZoom: 17,
-              ),
+          : Column(
               children: [
-                TileLayer(
-                  urlTemplate:
-                      "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-                  userAgentPackageName: 'com.example.topografoapp',
-                ),
-                PolygonLayer(
-                  polygons: [
-                    Polygon(
-                      points: puntos,
-                      borderColor: Colors.green,
-                      borderStrokeWidth: 3,
-                      color: Colors.green.withOpacity(0.3),
+                Expanded(
+                  child: FlutterMap(
+                    options: MapOptions(
+                      initialCenter: puntos.first,
+                      initialZoom: 17,
                     ),
-                  ],
+                    children: [
+                      TileLayer(
+                        urlTemplate:
+                            "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                        userAgentPackageName: 'com.example.topografoapp',
+                      ),
+                      PolygonLayer(
+                        polygons: [
+                          Polygon(
+                            points: puntos,
+                            borderColor: Colors.green,
+                            borderStrokeWidth: 3,
+                            color: Colors.green.withOpacity(0.3),
+                          ),
+                        ],
+                      ),
+                      MarkerLayer(
+                        markers: puntos
+                            .map((p) => Marker(
+                                  point: p,
+                                  width: 25,
+                                  height: 25,
+                                  child: const Icon(Icons.circle,
+                                      size: 10, color: Colors.red),
+                                ))
+                            .toList(),
+                      ),
+                    ],
+                  ),
                 ),
-                MarkerLayer(
-                  markers: puntos
-                      .map((p) => Marker(
-                            point: p,
-                            width: 25,
-                            height: 25,
-                            child: const Icon(Icons.circle,
-                                size: 10, color: Colors.red),
-                          ))
-                      .toList(),
+                Padding(
+                  padding: const EdgeInsets.all(10),
+                  child: Column(
+                    children: [
+                      if (terreno['descripcion'] != null &&
+                          terreno['descripcion'].toString().trim().isNotEmpty)
+                        Text(
+                          terreno['descripcion'],
+                          style: const TextStyle(fontSize: 16),
+                        ),
+                      const SizedBox(height: 8),
+                      Text(
+                        "Área: ${terreno['area']?.toStringAsFixed(2) ?? '0.0'} m²",
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),

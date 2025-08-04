@@ -83,13 +83,11 @@ class _MapaTopografoPageState extends State<MapaTopografoPage> {
     _timer = Timer.periodic(const Duration(seconds: 10), (_) async {
       await UbicacionService.obtenerYGuardar();
 
-      // 👇 Esto actualiza tu posición local en el mapa
       final pos = await Geolocator.getCurrentPosition();
       setState(() {
         _posicion = pos;
       });
 
-      // 👇 Esto centra el mapa
       mapController.move(
         LatLng(pos.latitude, pos.longitude),
         mapController.camera.zoom,
@@ -120,6 +118,9 @@ class _MapaTopografoPageState extends State<MapaTopografoPage> {
 
   @override
   Widget build(BuildContext context) {
+    final colorPrimario = Theme.of(context).primaryColor;
+    final colorSecundario = Theme.of(context).colorScheme.secondary;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Mapa del Topógrafo'),
@@ -130,6 +131,7 @@ class _MapaTopografoPageState extends State<MapaTopografoPage> {
               detenerEnvioUbicacion();
               Navigator.pushReplacementNamed(context, '/');
             },
+            tooltip: 'Cerrar sesión',
           ),
         ],
       ),
@@ -140,6 +142,7 @@ class _MapaTopografoPageState extends State<MapaTopografoPage> {
                 SwitchListTile(
                   title: const Text("Enviar ubicación cada 10 segundos"),
                   value: _enviarUbicacion,
+                  activeColor: colorSecundario,
                   onChanged: (value) {
                     setState(() {
                       _enviarUbicacion = value;
@@ -176,9 +179,9 @@ class _MapaTopografoPageState extends State<MapaTopografoPage> {
                             ),
                             width: 40,
                             height: 40,
-                            child: const Icon(
+                            child: Icon(
                               Icons.my_location,
-                              color: Colors.blue,
+                              color: colorPrimario,
                               size: 35,
                             ),
                           ),
@@ -189,9 +192,9 @@ class _MapaTopografoPageState extends State<MapaTopografoPage> {
                               height: 30,
                               child: Tooltip(
                                 message: t['nombre'],
-                                child: const Icon(
+                                child: Icon(
                                   Icons.person_pin_circle,
-                                  color: Colors.orange,
+                                  color: colorSecundario,
                                   size: 30,
                                 ),
                               ),
@@ -201,36 +204,45 @@ class _MapaTopografoPageState extends State<MapaTopografoPage> {
                     ],
                   ),
                 ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const NuevoTerrenoPage(),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.add_location_alt),
-                      label: const Text("Nuevo terreno"),
-                    ),
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const TerrenosGuardadosPage(),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.map),
-                      label: const Text("Ver terrenos"),
-                    ),
-                  ],
-                ),
                 const SizedBox(height: 10),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const NuevoTerrenoPage(),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.add_location_alt),
+                          label: const Text("Nuevo terreno"),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const TerrenosGuardadosPage(),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.map),
+                          label: const Text("Ver terrenos"),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
               ],
             ),
     );

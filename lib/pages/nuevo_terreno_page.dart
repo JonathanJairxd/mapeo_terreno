@@ -106,98 +106,118 @@ class _NuevoTerrenoPageState extends State<NuevoTerrenoPage> {
     return Scaffold(
       appBar: AppBar(title: const Text("Nuevo Terreno")),
       body: posicionInicial == null
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
+    ? const Center(child: CircularProgressIndicator())
+    : Column(
+        children: [
+          Expanded(
+            child: FlutterMap(
+              options: MapOptions(
+                initialCenter: posicionInicial!,
+                initialZoom: 17,
+                onTap: (_, latlng) {
+                  agregarPuntoManual(latlng);
+                },
+              ),
               children: [
-                Expanded(
-                  child: FlutterMap(
-                    options: MapOptions(
-                      initialCenter: posicionInicial!,
-                      initialZoom: 17,
-                      onTap: (_, latlng) {
-                        agregarPuntoManual(latlng);
-                      },
-                    ),
-                    children: [
-                      TileLayer(
-                        urlTemplate:
-                            "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-                        userAgentPackageName: 'com.example.topografoapp',
-                      ),
-                      if (puntos.isNotEmpty)
-                        PolygonLayer(
-                          polygons: [
-                            Polygon(
-                              points: puntos,
-                              borderColor: Colors.green,
-                              borderStrokeWidth: 3,
-                              color: Colors.green.withOpacity(0.3),
-                            ),
-                          ],
-                        ),
-                      MarkerLayer(
-                        markers: puntos
-                            .map(
-                              (p) => Marker(
-                                point: p,
-                                width: 20,
-                                height: 20,
-                                child: const Icon(
-                                  Icons.circle,
-                                  size: 12,
-                                  color: Colors.red,
-                                ),
-                              ),
-                            )
-                            .toList(),
-                      ),
-                    ],
-                  ),
+                TileLayer(
+                  urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                  userAgentPackageName: 'com.example.topografoapp',
                 ),
-                Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: Column(
-                    children: [
-                      ElevatedButton.icon(
-                        onPressed: agregarPuntoGPS,
-                        icon: const Icon(Icons.my_location),
-                        label: const Text("Agregar punto GPS actual"),
-                      ),
-                      ElevatedButton.icon(
-                        onPressed: () {
-                          setState(() {
-                            puntos.clear();
-                            area = 0.0;
-                          });
-                        },
-                        icon: const Icon(Icons.delete_forever),
-                        label: const Text("Borrar puntos"),
-                      ),
-                      TextField(
-                        controller: nombreController,
-                        decoration: const InputDecoration(
-                          labelText: 'Nombre del terreno',
-                        ),
-                      ),
-                      TextField(
-                        controller: descripcionController,
-                        decoration: const InputDecoration(
-                          labelText: 'Descripción (opcional)',
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text("Área: ${area.toStringAsFixed(2)} m²"),
-                      const SizedBox(height: 8),
-                      ElevatedButton.icon(
-                        onPressed: guardarTerreno,
-                        icon: const Icon(Icons.save),
-                        label: const Text("Guardar terreno"),
+                if (puntos.isNotEmpty)
+                  PolygonLayer(
+                    polygons: [
+                      Polygon(
+                        points: puntos,
+                        borderColor: Colors.green,
+                        borderStrokeWidth: 3,
+                        color: Colors.green.withOpacity(0.3),
                       ),
                     ],
                   ),
+                MarkerLayer(
+                  markers: puntos
+                      .map(
+                        (p) => Marker(
+                          point: p,
+                          width: 20,
+                          height: 20,
+                          child: const Icon(
+                            Icons.circle,
+                            size: 12,
+                            color: Colors.red,
+                          ),
+                        ),
+                      )
+                      .toList(),
                 ),
               ],
             ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  alignment: WrapAlignment.center,
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: agregarPuntoGPS,
+                      icon: const Icon(Icons.my_location),
+                      label: const Text("Punto GPS"),
+                    ),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        setState(() {
+                          puntos.clear();
+                          area = 0.0;
+                        });
+                      },
+                      icon: const Icon(Icons.delete_forever),
+                      label: const Text("Borrar puntos"),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red.shade400,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: nombreController,
+                  decoration: const InputDecoration(
+                    labelText: 'Nombre del terreno',
+                    isDense: true,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: descripcionController,
+                  decoration: const InputDecoration(
+                    labelText: 'Descripción (opcional)',
+                    isDense: true,
+                  ),
+                  maxLines: 2,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  "Área: ${area.toStringAsFixed(2)} m²",
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 6),
+                ElevatedButton.icon(
+                  onPressed: guardarTerreno,
+                  icon: const Icon(Icons.save),
+                  label: const Text("Guardar terreno"),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+
     );
   }
 }

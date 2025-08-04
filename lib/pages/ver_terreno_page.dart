@@ -14,31 +14,43 @@ class VerTerrenoPage extends StatelessWidget {
         .toList();
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(terreno['nombre']),
-      ),
-      body: FlutterMap(
-        options: MapOptions(
-          initialCenter: puntos.isNotEmpty ? puntos[0] : LatLng(0, 0),
-          initialZoom: 17,
-        ),
-        children: [
-          TileLayer(
-            urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-            userAgentPackageName: 'com.example.mapeo_terreno',
-          ),
-          PolygonLayer(
-            polygons: [
-              Polygon(
-                points: puntos,
-                borderColor: Colors.green,
-                borderStrokeWidth: 3,
-                color: Colors.green.withOpacity(0.3),
+      appBar: AppBar(title: Text(terreno['nombre'] ?? 'Terreno')),
+      body: puntos.isEmpty
+          ? const Center(child: Text('Terreno sin puntos'))
+          : FlutterMap(
+              options: MapOptions(
+                initialCenter: puntos.first,
+                initialZoom: 17,
               ),
-            ],
-          ),
-        ],
-      ),
+              children: [
+                TileLayer(
+                  urlTemplate:
+                      "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                  userAgentPackageName: 'com.example.topografoapp',
+                ),
+                PolygonLayer(
+                  polygons: [
+                    Polygon(
+                      points: puntos,
+                      borderColor: Colors.green,
+                      borderStrokeWidth: 3,
+                      color: Colors.green.withOpacity(0.3),
+                    ),
+                  ],
+                ),
+                MarkerLayer(
+                  markers: puntos
+                      .map((p) => Marker(
+                            point: p,
+                            width: 25,
+                            height: 25,
+                            child: const Icon(Icons.circle,
+                                size: 10, color: Colors.red),
+                          ))
+                      .toList(),
+                ),
+              ],
+            ),
     );
   }
 }

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'mapa_topografo_page.dart'; // La ruta puede cambiar luego
-import 'mapa_admin_page.dart';
+
+import '../globals.dart';
+import 'mapa_topografo_page.dart'; // siguiente pantalla que crearemos
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -11,61 +12,61 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final TextEditingController emailController = TextEditingController();
-  final TextEditingController passwordController = TextEditingController();
+  final TextEditingController correoController = TextEditingController();
+  final TextEditingController contrasenaController = TextEditingController();
+
   final supabase = Supabase.instance.client;
+
   bool cargando = false;
-  String error = '';
+  String mensaje = '';
 
   Future<void> login() async {
     setState(() {
       cargando = true;
-      error = '';
+      mensaje = '';
     });
 
     try {
-      final response = await supabase.auth.signInWithPassword(
-        email: emailController.text,
-        password: passwordController.text,
-      );
+      final correo = correoController.text.trim();
+      final contrasena = contrasenaController.text.trim();
 
-      if (response.user != null) {
-        // Buscamos el rol del usuario autenticado
-        final userId = response.user!.id;
-        final datos = await supabase
-            .from('usuarios')
-            .select('rol, activo')
-            .eq('id', userId)
-            .single();
+      final data = await supabase
+          .from('usuarios')
+          .select()
+          .eq('email', correo)
+          .eq('contrasena', contrasena)
+          .eq('activo', true)
+          .maybeSingle();
 
-        if (datos['activo'] != true) {
-          setState(() {
-            error = 'Usuario desactivado';
-          });
-          return;
-        }
+      if (data == null) {
+        setState(() {
+          mensaje = 'Credenciales incorrectas o usuario inactivo.';
+        });
+        return;
+      }
 
-        final rol = datos['rol'];
+      usuarioIdGlobal = data['id'].toString();
+      rolGlobal = data['rol'].toString();
+      nombreUsuarioGlobal = data['nombre'].toString();
 
-        if (rol == 'admin') {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const MapaAdminPage()),
-          );
-        } else {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const MapaTopografoPage()),
-          );
-        }
+      if (rolGlobal == 'topografo') {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const MapaTopografoPage()),
+        );
+      } else if (rolGlobal == 'admin') {
+        // A futuro te haré la pantalla del admin
+        setState(() {
+          mensaje = 'Acceso para administrador no implementado aún.';
+        });
       } else {
         setState(() {
-          error = 'Login incorrecto';
+          mensaje = 'Rol no reconocido.';
         });
       }
     } catch (e) {
       setState(() {
-        error = 'Error: ${e.toString()}';
+        mensaje = 'Error al iniciar sesión: $e';
       });
     } finally {
       setState(() {
@@ -79,23 +80,25 @@ class _LoginPageState extends State<LoginPage> {
     return Scaffold(
       appBar: AppBar(title: const Text('Ingreso')),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
+        padding: const EdgeInsets.all(20),
+        child: ListView(
           children: [
             TextField(
-              controller: emailController,
+              controller: correoController,
               decoration: const InputDecoration(labelText: 'Correo'),
+              keyboardType: TextInputType.emailAddress,
             ),
             TextField(
-              controller: passwordController,
+              controller: contrasenaController,
               decoration: const InputDecoration(labelText: 'Contraseña'),
               obscureText: true,
             ),
             const SizedBox(height: 20),
-            if (error.isNotEmpty)
-              Text(error, style: const TextStyle(color: Colors.red)),
+            if (mensaje.isNotEmpty)
+              Text(mensaje, style: const TextStyle(color: Colors.red)),
+            const SizedBox(height: 10),
             cargando
-                ? const CircularProgressIndicator()
+                ? const Center(child: CircularProgressIndicator())
                 : ElevatedButton(
                     onPressed: login,
                     child: const Text('Ingresar'),

@@ -1,5 +1,8 @@
 import 'package:latlong2/latlong.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../globals.dart';
+
 //import 'dart:math';
 
 class TerrenoService {
@@ -21,22 +24,24 @@ class TerrenoService {
   }
 
   /// Guarda el terreno en Supabase
-  static Future<void> guardarTerreno(List<LatLng> puntos) async {
-    final userId = supabase.auth.currentUser?.id;
-    if (userId == null || puntos.length < 3) return;
+  static Future<void> guardarTerreno(
+    List<LatLng> puntos, String nombre, String descripcion) async {
+  if (usuarioIdGlobal == null || puntos.length < 3) return;
+  final userId = usuarioIdGlobal!;
+  final area = calcularArea(puntos);
 
-    final area = calcularArea(puntos);
+  final puntosJson = puntos
+      .map((p) => {'lat': p.latitude, 'lng': p.longitude})
+      .toList();
 
-    final puntosJson = puntos
-        .map((p) => {'lat': p.latitude, 'lng': p.longitude})
-        .toList();
+  await supabase.from('terrenos').insert({
+    'user_id': userId,
+    'nombre': nombre,
+    'descripcion': descripcion,
+    'puntos': puntosJson,
+    'area': area,
+    'timestamp': DateTime.now().toIso8601String(),
+  });
+}
 
-    await supabase.from('terrenos').insert({
-      'user_id': userId,
-      'nombre': 'Terreno-${DateTime.now().millisecondsSinceEpoch}',
-      'puntos': puntosJson,
-      'area': area,
-      'timestamp': DateTime.now().toIso8601String(),
-    });
-  }
 }

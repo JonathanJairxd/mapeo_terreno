@@ -5,10 +5,10 @@ import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../globals.dart';
 import '../services/ubicacion_service.dart';
-import '../services/terreno_service.dart';
-import '../pages/terreno_detalle_page.dart';
-
+import 'nuevo_terreno_page.dart';
+import 'terrenos_guardados_page.dart';
 
 class MapaTopografoPage extends StatefulWidget {
   const MapaTopografoPage({super.key});
@@ -18,51 +18,84 @@ class MapaTopografoPage extends StatefulWidget {
 }
 
 class _MapaTopografoPageState extends State<MapaTopografoPage> {
-  Position? _posicionActual;
-  Timer? _timerUbicacion;
-  bool _enviarUbicacion = false; // Estado del switch
-  List<LatLng> _puntos = [];
+  final supabase = Supabase.instance.client;
+  final mapController = MapController();
+
+  Position? _posicion;
+  Timer? _timer;
+  bool _enviarUbicacion = false;
+
+  List<Map<String, dynamic>> _topografos = [];
 
   @override
   void initState() {
     super.initState();
-    obtenerUbicacion();
-    obtenerPuntosDesdeSupabase();
+    obtenerUbicacionInicial();
+    cargarUbicacionesTopografos();
   }
 
-  /// Pide permisos y obtiene la posición actual
-  Future<void> obtenerUbicacion() async {
-    bool servicioHabilitado = await Geolocator.isLocationServiceEnabled();
-    if (!servicioHabilitado) {
-      await Geolocator.openLocationSettings();
-      return;
-    }
-
-    LocationPermission permiso = await Geolocator.checkPermission();
-    if (permiso == LocationPermission.denied) {
-      permiso = await Geolocator.requestPermission();
-      if (permiso == LocationPermission.denied) return;
-    }
-
-    final posicion = await Geolocator.getCurrentPosition();
+  Future<void> obtenerUbicacionInicial() async {
+    final pos = await UbicacionService.obtenerUbicacionActual();
     setState(() {
-      _posicionActual = posicion;
+      _posicion = pos;
     });
   }
 
-  Future<void> obtenerPuntosDesdeSupabase() async {
-    final puntos = await UbicacionService.obtenerPuntosUsuario();
+  Future<void> cargarUbicacionesTopografos() async {
+    final response = await supabase
+        .from('ubicaciones')
+        .select('user_id, latitud, longitud, timestamp')
+        .order('timestamp', ascending: false);
+
+    final users = await supabase
+        .from('usuarios')
+        .select('id, nombre')
+        .eq('activo', true)
+        .eq('rol', 'topografo');
+
+    final topografos = <Map<String, dynamic>>[];
+
+    for (final u in users) {
+      final userId = u['id'];
+      final nombre = u['nombre'];
+      Map<String, dynamic>? ubicacion;
+      try {
+        ubicacion = response.firstWhere((item) => item['user_id'] == userId);
+      } catch (_) {
+        ubicacion = null;
+      }
+
+      if (ubicacion != null && userId != usuarioIdGlobal) {
+        topografos.add({
+          'nombre': nombre,
+          'lat': ubicacion['latitud'],
+          'lng': ubicacion['longitud'],
+        });
+      }
+    }
+
     setState(() {
-      _puntos = puntos;
+      _topografos = topografos;
     });
   }
 
-  /// Inicia el timer de envío
   void iniciarEnvioUbicacion() {
-    _timerUbicacion = Timer.periodic(const Duration(seconds: 10), (
-      timer,
-    ) async {
+    _timer = Timer.periodic(const Duration(seconds: 10), (_) async {
       await UbicacionService.obtenerYGuardar();
+
+      // 👇 Esto actualiza tu posición local en el mapa
+      final pos = await Geolocator.getCurrentPosition();
+      setState(() {
+        _posicion = pos;
+      });
+
+      // 👇 Esto centra el mapa
+      mapController.move(
+        LatLng(pos.latitude, pos.longitude),
+        mapController.camera.zoom,
+      );
+
+      await cargarUbicacionesTopografos();
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -75,9 +108,8 @@ class _MapaTopografoPageState extends State<MapaTopografoPage> {
     });
   }
 
-  /// Detiene el timer
   void detenerEnvioUbicacion() {
-    _timerUbicacion?.cancel();
+    _timer?.cancel();
   }
 
   @override
@@ -88,62 +120,30 @@ class _MapaTopografoPageState extends State<MapaTopografoPage> {
 
   @override
   Widget build(BuildContext context) {
-    void finalizarTerreno() async {
-      if (_puntos.length < 3) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Debes tener al menos 3 puntos para guardar el terreno',
-            ),
-          ),
-        );
-        return;
-      }
-
-      await TerrenoService.guardarTerreno(_puntos);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Terreno guardado en Supabase')),
-        );
-      }
-    }
-
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Mapa del topógrafo"),
+        title: const Text('Mapa del Topógrafo'),
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
-            onPressed: () async {
-              detenerEnvioUbicacion();
-              await Supabase.instance.client.auth.signOut();
-              if (mounted) {
-                Navigator.of(context).pushReplacementNamed('/');
-              }
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.map),
             onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const TerrenoDetallePage()),
-              );
+              detenerEnvioUbicacion();
+              Navigator.pushReplacementNamed(context, '/');
             },
           ),
         ],
       ),
-      body: _posicionActual == null
+      body: _posicion == null
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
                 SwitchListTile(
                   title: const Text("Enviar ubicación cada 10 segundos"),
                   value: _enviarUbicacion,
-                  onChanged: (bool value) {
+                  onChanged: (value) {
                     setState(() {
                       _enviarUbicacion = value;
-                      if (_enviarUbicacion) {
+                      if (value) {
                         iniciarEnvioUbicacion();
                       } else {
                         detenerEnvioUbicacion();
@@ -153,56 +153,84 @@ class _MapaTopografoPageState extends State<MapaTopografoPage> {
                 ),
                 Expanded(
                   child: FlutterMap(
+                    mapController: mapController,
                     options: MapOptions(
                       initialCenter: LatLng(
-                        _posicionActual!.latitude,
-                        _posicionActual!.longitude,
+                        _posicion!.latitude,
+                        _posicion!.longitude,
                       ),
-                      initialZoom: 17.0,
+                      initialZoom: 17,
                     ),
                     children: [
                       TileLayer(
                         urlTemplate:
                             "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-                        userAgentPackageName: 'com.example.mapeo_terreno',
+                        userAgentPackageName: 'com.example.topografoapp',
                       ),
                       MarkerLayer(
                         markers: [
                           Marker(
                             point: LatLng(
-                              _posicionActual!.latitude,
-                              _posicionActual!.longitude,
+                              _posicion!.latitude,
+                              _posicion!.longitude,
                             ),
                             width: 40,
                             height: 40,
                             child: const Icon(
-                              Icons.location_pin,
-                              color: Colors.red,
-                              size: 40,
+                              Icons.my_location,
+                              color: Colors.blue,
+                              size: 35,
                             ),
                           ),
-                        ],
-                      ),
-                      PolylineLayer(
-                        polylines: [
-                          Polyline(
-                            points: _puntos,
-                            strokeWidth: 4.0,
-                            color: Colors.blueAccent,
-                          ),
+                          for (final t in _topografos)
+                            Marker(
+                              point: LatLng(t['lat'], t['lng']),
+                              width: 30,
+                              height: 30,
+                              child: Tooltip(
+                                message: t['nombre'],
+                                child: const Icon(
+                                  Icons.person_pin_circle,
+                                  color: Colors.orange,
+                                  size: 30,
+                                ),
+                              ),
+                            ),
                         ],
                       ),
                     ],
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: ElevatedButton.icon(
-                    onPressed: finalizarTerreno,
-                    icon: const Icon(Icons.save),
-                    label: const Text("Finalizar terreno"),
-                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const NuevoTerrenoPage(),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.add_location_alt),
+                      label: const Text("Nuevo terreno"),
+                    ),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const TerrenosGuardadosPage(),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.map),
+                      label: const Text("Ver terrenos"),
+                    ),
+                  ],
                 ),
+                const SizedBox(height: 10),
               ],
             ),
     );

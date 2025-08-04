@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'mapa_topografo_page.dart'; // La ruta puede cambiar luego
+import 'mapa_admin_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -29,10 +30,34 @@ class _LoginPageState extends State<LoginPage> {
       );
 
       if (response.user != null) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const MapaTopografoPage()),
-        );
+        // Buscamos el rol del usuario autenticado
+        final userId = response.user!.id;
+        final datos = await supabase
+            .from('usuarios')
+            .select('rol, activo')
+            .eq('id', userId)
+            .single();
+
+        if (datos['activo'] != true) {
+          setState(() {
+            error = 'Usuario desactivado';
+          });
+          return;
+        }
+
+        final rol = datos['rol'];
+
+        if (rol == 'admin') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const MapaAdminPage()),
+          );
+        } else {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const MapaTopografoPage()),
+          );
+        }
       } else {
         setState(() {
           error = 'Login incorrecto';
@@ -67,7 +92,8 @@ class _LoginPageState extends State<LoginPage> {
               obscureText: true,
             ),
             const SizedBox(height: 20),
-            if (error.isNotEmpty) Text(error, style: const TextStyle(color: Colors.red)),
+            if (error.isNotEmpty)
+              Text(error, style: const TextStyle(color: Colors.red)),
             cargando
                 ? const CircularProgressIndicator()
                 : ElevatedButton(

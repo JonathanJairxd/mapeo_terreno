@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../globals.dart';
-import 'mapa_topografo_page.dart'; // siguiente pantalla que crearemos
+import 'mapa_topografo_page.dart'; 
+import 'mapa_admin_page.dart';
+
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -55,10 +57,10 @@ class _LoginPageState extends State<LoginPage> {
           MaterialPageRoute(builder: (_) => const MapaTopografoPage()),
         );
       } else if (rolGlobal == 'admin') {
-        // A futuro te haré la pantalla del admin
-        setState(() {
-          mensaje = 'Acceso para administrador no implementado aún.';
-        });
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const MapaAdminPage()),
+        );
       } else {
         setState(() {
           mensaje = 'Rol no reconocido.';
